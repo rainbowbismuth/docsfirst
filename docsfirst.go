@@ -178,6 +178,11 @@ func RewriteTex(blockMap map[string][]*Block, in <-chan string) (<-chan string, 
 					panic(fmt.Errorf("Missing block: %s", description))
 				}
 				firstBlock := blocks[0]
+				out <- "\\phantomsection"
+				out <- fmt.Sprintf(
+					"\\label{lst:%s%d}",
+					firstBlock.Description,
+					firstBlock.StartLine)
 				mintCommand := fmt.Sprint(
 					"\\begin{minted}[tabsize=4]{",
 					firstBlock.Language.MintedLanguage,
@@ -212,7 +217,10 @@ func RewriteTex(blockMap map[string][]*Block, in <-chan string) (<-chan string, 
 								firstBlock.Language.LineComment,
 								"| \\( \\ll \\) ",
 								blocks[i].Description,
-								" \\( \\gg \\) \\\\")
+								" \\( \\gg \\) \\hfill (\\ref{lst:",
+								blocks[i].Description,
+								blocks[i].StartLine,
+								"}) \\\\")
 						}
 					}
 				}

@@ -9,6 +9,8 @@
 \newtcolorbox{defquote}{colback=block-gray,grow to right by=20mm,grow to left by=0mm,
 boxrule=0pt,boxsep=5pt,breakable}
 
+\setcounter{secnumdepth}{5}
+
 \title{The docsfirst Book}
 \author{Emily A. Bellows}
 
@@ -61,10 +63,11 @@ literate programming text is under this copy-left license, see
 
 \section{Usage}
 
-Gotta fill this out later
+\paragraph{} Gotta fill this out later
 
 \section{The docsfirst Literate Program}
 
+\paragraph{}
 The main task in \emph{docsfirst} is breaking files of source code into delimited,
 named blocks that are delinated by special comment markers. These source code
 blocks end up in the output .tex file when recalled by name in the input .tex
@@ -72,6 +75,7 @@ file.
 
 %DOCSFIRST Define Block
 
+\paragraph{}
 So what information do we record about a block? Every field here is critical.
 Most important is the \emph{Body}, that's a slice of the lines of code that make
 up the block. Next we have a \emph{Description}, which is a name for
@@ -81,6 +85,7 @@ is the line in that file that this block starts on. Finally we have a pointer to
 a \emph{Language} which contains useful information about which programming
 language a block is written in.
 
+\paragraph{}
 You can see all of those fields in action in the above code block in this book.
 \emph{Define Block} is a description. The filename is \emph{docsfirst.go}, and
 thats followed by the line number where that block starts in that file. The code
@@ -90,22 +95,27 @@ to syntax highlight the code is because of the data stored in the block's
 
 \subsection{The ParseBlocks function}
 
+\subsubsection{Overview}
+\paragraph{}
 %DOCSFIRST (ParseBlocks)
-
+\paragraph{}
 %DOCSFIRST Initialize block parsing state
-
+\paragraph{}
 %DOCSFIRST Start parsing blocks line by line
-
+\subsubsection{Parsing individual blocks}
+\paragraph{}
 %DOCSFIRST Parsing a block and we find the start of another
-
+\paragraph{}
 %DOCSFIRST Parsing a block and we find an end block marker
-
+\paragraph{}
 %DOCSFIRST If no match, append line to body
-
+\paragraph{}
 %DOCSFIRST Start parsing a new block
 
+\subsubsection{Handling user errors}
+\paragraph{}
 %DOCSFIRST Handle dangling block ends
-
+\paragraph{}
 %DOCSFIRST Check if the file ended while parsing a block
 
 \end{document}
