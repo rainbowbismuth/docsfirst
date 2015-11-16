@@ -25,7 +25,7 @@ func TestParseBlocks(t *testing.T) {
 	testLang := &Language{
 		FileEndingRegex: "*.hs",
 		LineComment:     "--",
-		Minted:          "\\begin{minted}{haskell}",
+		MintedLanguage:  "haskell",
 	}
 	in := make(chan string, 8)
 	body := "main = putStrLn \"Hello, world!\""
@@ -55,7 +55,7 @@ func TestRefCounts(t *testing.T) {
 	testLang := &Language{
 		FileEndingRegex: "*.py",
 		LineComment:     "#",
-		Minted:          "\\begin{minted}{python}",
+		MintedLanguage:  "python",
 	}
 	inSrc := make(chan string, 8)
 	inTex := make(chan string, 8)

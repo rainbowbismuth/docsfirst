@@ -22,13 +22,13 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strings"
+	"regexp"
 )
 
 type Language struct {
 	FileEndingRegex string
 	LineComment     string
-	Minted          string
+	MintedLanguage  string
 }
 
 // BEGIN Define Block
@@ -36,69 +36,113 @@ type Block struct {
 	Language    *Language
 	FileName    string
 	StartLine   int
+	Indentation string
+	Tag         string
 	Description string
 	Body        []string
 }
 
 // END
+
 const (
-	BEGIN     = " BEGIN "
-	END       = " END"
-	DOCSFIRST = "%DOCSFIRST "
+	SPACE     = `(\s*)`
+	BEGIN     = ` *BEGIN(\([^\)]*\))? *(.*)`
+	END       = " *END"
+	DOCSFIRST = "% *DOCSFIRST *(.*)"
 )
 
-func ParseBlocks(lang *Language, fileName string, in <-chan string) <-chan *Block {
+// BEGIN(ParseBlocks) Define ParseBlocks
+func ParseBlocks(
+	lang *Language, fileName string, in <-chan string) <-chan *Block {
 	out := make(chan *Block, 64)
 	go func() {
 		defer close(out)
+		// BEGIN(ParseBlocks) Initialize block parsing state
 		lineNumber := 0
 		startedAtLine := 0
+		var curIndentation string
 		var curDescription string
+		var curTag string
 		var curBody []string
-		specificBegin := lang.LineComment + BEGIN
-		specificEnd := lang.LineComment + END
+
+		beginRegex, err := regexp.Compile(SPACE + lang.LineComment + BEGIN)
+		if err != nil {
+			panic(err)
+		}
+
+		endRegex, err := regexp.Compile(SPACE + lang.LineComment + END)
+		if err != nil {
+			panic(err)
+		}
+		// BEGIN(ParseBlocks) Start parsing blocks line by line
 		for line := range in {
 			lineNumber++
+			// BEGIN(ParseBlocks) Parsing a block and we find the start of another
 			if curDescription != "" {
-				if strings.HasPrefix(line, specificBegin) {
+				strings := beginRegex.FindStringSubmatch(line)
+				if strings != nil {
 					out <- &Block{
 						Language:    lang,
 						FileName:    fileName,
 						StartLine:   startedAtLine,
+						Indentation: curIndentation,
+						Tag:         curTag,
 						Description: curDescription,
 						Body:        curBody}
 					startedAtLine = lineNumber
-					curDescription = strings.Replace(line, specificBegin, "", 1)
+					curIndentation = strings[1]
+					curTag = strings[2]
+					curDescription = strings[3]
 					curBody = nil
-				} else if strings.HasPrefix(line, specificEnd) {
+					continue
+				}
+				// BEGIN(ParseBlocks) Parsing a block and we find an end block marker
+				strings = endRegex.FindStringSubmatch(line)
+				if strings != nil {
 					out <- &Block{
 						Language:    lang,
 						FileName:    fileName,
 						StartLine:   startedAtLine,
+						Indentation: curIndentation,
+						Tag:         curTag,
 						Description: curDescription,
 						Body:        curBody}
 					startedAtLine = -1
 					curDescription = ""
 					curBody = nil
-				} else {
-					curBody = append(curBody, line)
+					continue
 				}
+				// BEGIN(ParseBlocks) If no match, append line to body
+				curBody = append(curBody, line)
 			} else {
-				if strings.HasPrefix(line, specificBegin) {
+				// BEGIN(ParseBlocks) Start parsing a new block
+				strings := beginRegex.FindStringSubmatch(line)
+				if strings != nil {
 					startedAtLine = lineNumber
-					curDescription = strings.Replace(line, specificBegin, "", 1)
+					curIndentation = strings[1]
+					curTag = strings[2]
+					curDescription = strings[3]
 					curBody = nil
-				} else if strings.HasPrefix(line, specificEnd) {
-					panic(fmt.Errorf("Dangling end in %s at line %d", fileName, lineNumber))
+					continue
+				}
+				// BEGIN(ParseBlocks) Handle dangling block ends
+				strings = endRegex.FindStringSubmatch(line)
+				if strings != nil {
+					panic(fmt.Errorf(
+						"Dangling end in %s at line %d", fileName, lineNumber))
 				}
 			}
 		}
+		// BEGIN(ParseBlocks) Check if the file ended while parsing a block
 		if curBody != nil || curDescription != "" {
 			panic(fmt.Errorf("EOF in the middle of a block in %s", fileName))
 		}
+		// BEGIN(ParseBlocks) Define ParseBlocks
 	}()
 	return out
 }
+
+// END
 
 func GatherBlockMap(in <-chan *Block) <-chan map[string][]*Block {
 	out := make(chan map[string][]*Block, 1)
@@ -106,16 +150,16 @@ func GatherBlockMap(in <-chan *Block) <-chan map[string][]*Block {
 		defer close(out)
 		blockMap := make(map[string][]*Block)
 		for block := range in {
-			slice := blockMap[block.Description]
-			blockMap[block.Description] = append(slice, block)
+			if block.Tag != "" {
+				blockMap[block.Tag] = append(blockMap[block.Tag], block)
+			}
+			blockMap[block.Description] = append(blockMap[block.Description], block)
 		}
 		out <- blockMap
 	}()
 	return out
 }
 
-// BEGIN Unused
-// END
 func RewriteTex(blockMap map[string][]*Block, in <-chan string) (<-chan string, <-chan map[string]int) {
 	out := make(chan string, 64)
 	refcounts := make(chan map[string]int, 1)
@@ -123,38 +167,53 @@ func RewriteTex(blockMap map[string][]*Block, in <-chan string) (<-chan string, 
 		defer close(out)
 		defer close(refcounts)
 		counts := map[string]int{}
+		docsFirstRegex := regexp.MustCompile(DOCSFIRST)
 		for line := range in {
-			if strings.HasPrefix(line, DOCSFIRST) {
-				description := strings.Replace(line, DOCSFIRST, "", 1)
+			strings := docsFirstRegex.FindStringSubmatch(line)
+			if strings != nil {
+				description := strings[1]
 				counts[description]++
 				blocks := blockMap[description]
 				if blocks == nil {
 					panic(fmt.Errorf("Missing block: %s", description))
 				}
 				firstBlock := blocks[0]
+				mintCommand := fmt.Sprint(
+					"\\begin{minted}[tabsize=4]{",
+					firstBlock.Language.MintedLanguage,
+					"}")
 				out <- "\\begin{defquote}"
-				out <- fmt.Sprint("\\noindent \\( \\ll \\) ",
+				out <- fmt.Sprint(
+					"\\noindent \\( \\ll \\) ",
 					firstBlock.Description,
 					" \\( \\gg \\enspace \\equiv \\) \\hfill ",
 					firstBlock.FileName,
 					":",
 					firstBlock.StartLine)
-				out <- firstBlock.Language.Minted
+				out <- mintCommand
 				for _, bodyLine := range firstBlock.Body {
 					out <- bodyLine
 				}
 				out <- "\\end{minted}"
-				for i := 1; i < len(blocks); i++ {
-					if blocks[i].Description == firstBlock.Description {
-						out <- firstBlock.Language.Minted
-						for _, bodyLine := range blocks[i].Body {
-							out <- bodyLine
+				if len(blocks) > 1 {
+					for i := 1; i < len(blocks); i++ {
+						if blocks[i].Description == firstBlock.Description {
+							out <- mintCommand
+							for _, bodyLine := range blocks[i].Body {
+								out <- bodyLine
+							}
+							out <- "\\end{minted}"
+						} else {
+							out <- fmt.Sprint(
+								"\\mintinline[tabsize=4]{",
+								firstBlock.Language.MintedLanguage,
+								"}|",
+								blocks[i].Indentation,
+								firstBlock.Language.LineComment,
+								"| \\( \\ll \\) ",
+								blocks[i].Description,
+								" \\( \\gg \\) \\\\")
 						}
-						out <- "\\end{minted}"
-					} else {
-						out <- fmt.Sprint("\\quad \\( \\ll \\) ",
-							blocks[i].Description,
-							" \\( \\gg \\)")
 					}
 				}
 				out <- "\\end{defquote}"
@@ -208,12 +267,14 @@ func WriteLinesToFile(fileName string, in <-chan string) {
 }
 
 func CheckReferences(blockMap map[string][]*Block, refcounts map[string]int) {
-	for desc := range blockMap {
-		if refcounts[desc] == 0 {
+	for desc, blocks := range blockMap {
+		if refcounts[desc] == 0 && refcounts[blocks[0].Tag] == 0 {
 			block := blockMap[desc][0]
 			fn := block.FileName
 			line := block.StartLine
-			fmt.Printf("WARNING: Block defined at %s:%d was never used\n", fn, line)
+			fmt.Printf(
+				"WARNING: Block \"%s\" defined at %s:%d was never used\n",
+				desc, fn, line)
 		}
 	}
 }

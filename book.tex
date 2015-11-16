@@ -2,6 +2,7 @@
 \usepackage{minted}
 \usepackage[left=0.85in, right=1.75in]{geometry}
 \usepackage{hyperref}
+\usepackage{alltt}
 
 \usepackage[most]{tcolorbox}
 \definecolor{block-gray}{gray}{0.98}
@@ -86,5 +87,25 @@ thats followed by the line number where that block starts in that file. The code
 you see is the block's body, and finally, the reason \emph{docsfirst} knows how
 to syntax highlight the code is because of the data stored in the block's
 \emph{Language} field.
+
+\subsection{The ParseBlocks function}
+
+%DOCSFIRST (ParseBlocks)
+
+%DOCSFIRST Initialize block parsing state
+
+%DOCSFIRST Start parsing blocks line by line
+
+%DOCSFIRST Parsing a block and we find the start of another
+
+%DOCSFIRST Parsing a block and we find an end block marker
+
+%DOCSFIRST If no match, append line to body
+
+%DOCSFIRST Start parsing a new block
+
+%DOCSFIRST Handle dangling block ends
+
+%DOCSFIRST Check if the file ended while parsing a block
 
 \end{document}

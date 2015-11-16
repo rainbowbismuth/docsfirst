@@ -22,7 +22,7 @@ func main() {
 	language := &docsfirst.Language{
 		FileEndingRegex: "*.go",
 		LineComment:     "//",
-		Minted:          "\\begin{minted}{go}",
+		MintedLanguage:  "go",
 	}
 	codeSrc := docsfirst.ReadLinesFromFile("docsfirst.go")
 	texSrc := docsfirst.ReadLinesFromFile("book.tex")
