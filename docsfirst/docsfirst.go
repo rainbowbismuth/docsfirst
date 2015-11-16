@@ -28,6 +28,7 @@ func main() {
 	texSrc := docsfirst.ReadLinesFromFile("book.tex")
 	blocks := docsfirst.ParseBlocks(language, "docsfirst.go", codeSrc)
 	blockMap := <-docsfirst.GatherBlockMap(blocks)
-	linesOut, _ := docsfirst.RewriteTex(blockMap, texSrc)
+	linesOut, refCounts := docsfirst.RewriteTex(blockMap, texSrc)
 	docsfirst.WriteLinesToFile("out.tex", linesOut)
+	docsfirst.CheckReferences(blockMap, <-refCounts)
 }

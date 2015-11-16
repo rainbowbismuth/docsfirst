@@ -56,9 +56,7 @@ func ParseBlocks(lang *Language, fileName string, in <-chan string) <-chan *Bloc
 		var curDescription string
 		var curBody []string
 		specificBegin := lang.LineComment + BEGIN
-		fmt.Println(specificBegin)
 		specificEnd := lang.LineComment + END
-		fmt.Println(specificEnd)
 		for line := range in {
 			lineNumber++
 			if curDescription != "" {
@@ -103,7 +101,7 @@ func ParseBlocks(lang *Language, fileName string, in <-chan string) <-chan *Bloc
 }
 
 func GatherBlockMap(in <-chan *Block) <-chan map[string][]*Block {
-	out := make(chan map[string][]*Block)
+	out := make(chan map[string][]*Block, 1)
 	go func() {
 		defer close(out)
 		blockMap := make(map[string][]*Block)
@@ -116,9 +114,11 @@ func GatherBlockMap(in <-chan *Block) <-chan map[string][]*Block {
 	return out
 }
 
+// BEGIN Unused
+// END
 func RewriteTex(blockMap map[string][]*Block, in <-chan string) (<-chan string, <-chan map[string]int) {
 	out := make(chan string, 64)
-	refcounts := make(chan map[string]int)
+	refcounts := make(chan map[string]int, 1)
 	go func() {
 		defer close(out)
 		defer close(refcounts)
@@ -203,6 +203,17 @@ func WriteLinesToFile(fileName string, in <-chan string) {
 		_, err = outFile.WriteString("\n")
 		if err != nil {
 			panic(err)
+		}
+	}
+}
+
+func CheckReferences(blockMap map[string][]*Block, refcounts map[string]int) {
+	for desc := range blockMap {
+		if refcounts[desc] == 0 {
+			block := blockMap[desc][0]
+			fn := block.FileName
+			line := block.StartLine
+			fmt.Printf("WARNING: Block defined at %s:%d was never used\n", fn, line)
 		}
 	}
 }
