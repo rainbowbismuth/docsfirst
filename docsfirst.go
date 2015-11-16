@@ -30,6 +30,7 @@ type Language struct {
 	LineComment     string
 	Minted          string
 }
+
 // BEGIN Define Block
 type Block struct {
 	Language    *Language
@@ -38,6 +39,7 @@ type Block struct {
 	Description string
 	Body        []string
 }
+
 // END
 const (
 	BEGIN     = "BEGIN"
