@@ -1,0 +1,90 @@
+\documentclass{article}
+\usepackage{minted}
+\usepackage[left=0.85in, right=1.75in]{geometry}
+\usepackage{hyperref}
+
+\usepackage[most]{tcolorbox}
+\definecolor{block-gray}{gray}{0.98}
+\newtcolorbox{defquote}{colback=block-gray,grow to right by=20mm,grow to left by=0mm,
+boxrule=0pt,boxsep=5pt,breakable}
+
+\title{The docsfirst Book}
+\author{Emily A. Bellows}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+\marginpar{WARNING: This program \(and text\) is still heavily in development!
+Expect lies and incompleteness.}
+This book is the complete documentation for the \emph{docsfirst} program.
+
+\paragraph{What does it do?} \emph{docsfirst} is a tool that analyzes source
+code for specially marked blocks of code, and inserts it in various ways
+into a .tex file.
+
+\paragraph{Why?} I wanted a modern literate programming tool that didn't require
+special tooling on either the \LaTeX\ or the program side. Most of the
+literate programming tools I was messing around with had custom file types that
+no IDE or Syntax Highlighter would support. I wanted a tool that would use a
+programming language's native commenting system, and take out the blocks of
+code, rather then taking documentation and trying to extract files of code from
+it.
+
+\paragraph{What's literate programing?} It's an approach to programming
+popularized by Donald Knuth. The idea is to intermix
+prose and code in a way that best explains the human thoughts and intentions
+behind a program, and not simply the low-level concerns of how code is organized
+into folders and files. The goal is to give humans a place to start reading your
+code, along with explanations every step of the way so that by the end of the
+literate program text, they should understand the entire program.
+
+\paragraph{How far along is the project?} Not very atm, just getting started!
+But it shouldn't take long now given how quick the python prototype went.
+
+\paragraph{How is this book written?} Using this very tool of course! Along with
+a handful of friends like \emph{pdflatex} and \emph{pdf2htmlex}.
+
+\subsection{Copyright}
+
+\paragraph{GNU GPLv3} The entirety of this project's code is under the GNU
+General Public License, please see the file \emph{LICENSE} in the root
+directory.
+
+%DOCSFIRST Copyright
+
+\paragraph{Attribution-ShareAlike CC BY-SA} The non-code part of this
+literate programming text is under this copy-left license, see
+\url{https://creativecommons.org/licenses/by-sa/4.0/} for more details.
+
+\section{Usage}
+
+Gotta fill this out later
+
+\section{The docsfirst Literate Program}
+
+The main task in \emph{docsfirst} is breaking files of source code into delimited,
+named blocks that are delinated by special comment markers. These source code
+blocks end up in the output .tex file when recalled by name in the input .tex
+file.
+
+%DOCSFIRST Define Block
+
+So what information do we record about a block? Every field here is critical.
+Most important is the \emph{Body}, that's a slice of the lines of code that make
+up the block. Next we have a \emph{Description}, which is a name for
+a\footnote{Actually, one or more blocks. We'll get to that a bit later} block.
+\emph{FileName} is the file in which a block came from, and \emph{LineNumber}
+is the line in that file that this block starts on. Finally we have a pointer to
+a \emph{Language} which contains useful information about which programming
+language a block is written in.
+
+You can see all of those fields in action in the above code block in this book.
+\emph{Define Block} is a description. The filename is \emph{docsfirst.go}, and
+thats followed by the line number where that block starts in that file. The code
+you see is the block's body, and finally, the reason \emph{docsfirst} knows how
+to syntax highlight the code is because of the data stored in the block's
+\emph{Language} field.
+
+\end{document}
