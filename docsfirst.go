@@ -91,7 +91,7 @@ func ParseBlocks(lang *Language, fileName string, in <-chan string) <-chan *Bloc
 					curDescription = strings.Replace(line, specificBegin, "", 1)
 					curBody = nil
 				} else if strings.HasPrefix(line, specificEnd) {
-					panic(fmt.Errorf("Dangling end in %s at line %s", fileName, lineNumber))
+					panic(fmt.Errorf("Dangling end in %s at line %d", fileName, lineNumber))
 				}
 			}
 		}
