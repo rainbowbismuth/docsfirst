@@ -42,9 +42,9 @@ type Block struct {
 
 // END
 const (
-	BEGIN     = "BEGIN"
-	END       = "END"
-	DOCSFIRST = "%DOCSFIRST"
+	BEGIN     = " BEGIN "
+	END       = " END"
+	DOCSFIRST = "%DOCSFIRST "
 )
 
 func ParseBlocks(lang *Language, fileName string, in <-chan string) <-chan *Block {
@@ -56,7 +56,9 @@ func ParseBlocks(lang *Language, fileName string, in <-chan string) <-chan *Bloc
 		var curDescription string
 		var curBody []string
 		specificBegin := lang.LineComment + BEGIN
+		fmt.Println(specificBegin)
 		specificEnd := lang.LineComment + END
+		fmt.Println(specificEnd)
 		for line := range in {
 			lineNumber++
 			if curDescription != "" {
@@ -93,6 +95,9 @@ func ParseBlocks(lang *Language, fileName string, in <-chan string) <-chan *Bloc
 				}
 			}
 		}
+		if curBody != nil || curDescription != "" {
+			panic(fmt.Errorf("EOF in the middle of a block in %s", fileName))
+		}
 	}()
 	return out
 }
@@ -111,13 +116,17 @@ func GatherBlockMap(in <-chan *Block) <-chan map[string][]*Block {
 	return out
 }
 
-func RewriteTex(blockMap map[string][]*Block, in <-chan string) <-chan string {
+func RewriteTex(blockMap map[string][]*Block, in <-chan string) (<-chan string, <-chan map[string]int) {
 	out := make(chan string, 64)
+	refcounts := make(chan map[string]int)
 	go func() {
 		defer close(out)
+		defer close(refcounts)
+		counts := map[string]int{}
 		for line := range in {
 			if strings.HasPrefix(line, DOCSFIRST) {
 				description := strings.Replace(line, DOCSFIRST, "", 1)
+				counts[description]++
 				blocks := blockMap[description]
 				if blocks == nil {
 					panic(fmt.Errorf("Missing block: %s", description))
@@ -153,12 +162,13 @@ func RewriteTex(blockMap map[string][]*Block, in <-chan string) <-chan string {
 				out <- line
 			}
 		}
+		refcounts <- counts
 	}()
-	return out
+	return out, refcounts
 }
 
 func ReadLinesFromFile(fileName string) <-chan string {
-	out := make(chan string, 128)
+	out := make(chan string, 64)
 	go func() {
 		defer close(out)
 		inFile, err := os.Open(fileName)

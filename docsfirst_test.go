@@ -24,25 +24,61 @@ import (
 func TestParseBlocks(t *testing.T) {
 	testLang := &Language{
 		FileEndingRegex: "*.hs",
-		LineComment:     "-- ",
+		LineComment:     "--",
 		Minted:          "\\begin{minted}{haskell}",
 	}
-	in := make(chan string, 3)
+	in := make(chan string, 8)
 	body := "main = putStrLn \"Hello, world!\""
-	in <- "-- BEGIN HelloWorld"
-	in <- body
-	in <- "-- END"
+	go func() {
+		defer close(in)
+		in <- "-- BEGIN HelloWorld"
+		in <- body
+		in <- "-- END"
+	}()
 	blocks := ParseBlocks(testLang, "main.hs", in)
 	select {
 	case block := <-blocks:
-		if block.FileName != "main.hs" ||
+		if block == nil ||
+			block.FileName != "main.hs" ||
 			block.Body[0] != body ||
 			block.StartLine != 1 ||
-			block.Description != " HelloWorld" ||
+			block.Description != "HelloWorld" ||
 			block.Language != testLang {
 			t.Fatal(block)
 		}
 	case <-time.After(1 * time.Second):
 		t.Fatal("timed out")
+	}
+}
+
+func TestRefCounts(t *testing.T) {
+	testLang := &Language{
+		FileEndingRegex: "*.py",
+		LineComment:     "#",
+		Minted:          "\\begin{minted}{python}",
+	}
+	inSrc := make(chan string, 8)
+	inTex := make(chan string, 8)
+	go func() {
+		defer close(inSrc)
+		inSrc <- "# BEGIN Say hello world"
+		inSrc <- "print(\"Hello, world!\")"
+		inSrc <- "# BEGIN Say goodbye world"
+		inSrc <- "print(\"Goodbye, world!\")"
+		inSrc <- "# END"
+	}()
+	go func() {
+		defer close(inTex)
+		inTex <- "%DOCSFIRST Say hello world"
+		inTex <- "%DOCSFIRST Say goodbye world"
+		inTex <- "%DOCSFIRST Say hello world"
+	}()
+	blocks := ParseBlocks(testLang, "main.py", inSrc)
+	blockMap := <-GatherBlockMap(blocks)
+	_, refcount_future := RewriteTex(blockMap, inTex)
+	refcounts := <-refcount_future
+	if refcounts["Say hello world"] != 2 ||
+		refcounts["Say goodbye world"] != 1 {
+		t.Fatal(refcounts)
 	}
 }
