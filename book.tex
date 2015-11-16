@@ -19,11 +19,11 @@ boxrule=0pt,boxsep=5pt,breakable}
 
 \section{Introduction}
 
-\marginpar{WARNING: This program \(and text\) is still heavily in development!
+\marginpar{WARNING: This program and text is still heavily in development!
 Expect lies and incompleteness.}
-This book is the complete documentation for the \emph{docsfirst} program.
+This book is the complete documentation for the \texttt{docsfirst} program.
 
-\paragraph{What does it do?} \emph{docsfirst} is a tool that analyzes source
+\paragraph{What does it do?} \texttt{docsfirst} is a tool that searches source
 code for specially marked blocks of code, and inserts it in various ways
 into a .tex file.
 
@@ -47,12 +47,12 @@ literate program text, they should understand the entire program.
 But it shouldn't take long now given how quick the python prototype went.
 
 \paragraph{How is this book written?} Using this very tool of course! Along with
-a handful of friends like \emph{pdflatex} and \emph{pdf2htmlex}.
+a handful of friends like \texttt{pdflatex} and \texttt{pdf2htmlex}.
 
 \subsection{Copyright}
 
 \paragraph{GNU GPLv3} The entirety of this project's code is under the GNU
-General Public License, please see the file \emph{LICENSE} in the root
+General Public License, please see the file \texttt{LICENSE} in the root
 directory.
 
 %DOCSFIRST Copyright
@@ -68,7 +68,7 @@ literate programming text is under this copy-left license, see
 \section{The docsfirst Literate Program}
 
 \paragraph{}
-The main task in \emph{docsfirst} is breaking files of source code into delimited,
+The main task in \texttt{docsfirst} is breaking files of source code into delimited,
 named blocks that are delinated by special comment markers. These source code
 blocks end up in the output .tex file when recalled by name in the input .tex
 file.
@@ -77,29 +77,29 @@ file.
 
 \paragraph{}
 So what information do we record about a block? Every field here is critical.
-Most important is the \emph{Body}, that's a slice of the lines of code that make
-up the block. Next we have a \emph{Description}, which is a name for
+Most important is the \texttt{Body}, that's a slice of the lines of code that make
+up the block. Next we have a \texttt{Description}, which is a name for
 a\footnote{Actually, one or more blocks. We'll get to that a bit later} block.
-\emph{FileName} is the file in which a block came from, and \emph{LineNumber}
+\texttt{FileName} is the file in which a block came from, and \texttt{LineNumber}
 is the line in that file that this block starts on. Finally we have a pointer to
-a \emph{Language} which contains useful information about which programming
-language a block is written in. \emph{Tag} is an optional string that can be
-assigned to a block, and \emph{Indentation} records the whitespace before the
-BEGIN marker.
+a \texttt{Language} which contains useful information about which programming
+language a block is written in. \texttt{Tag} is an optional string that can be
+assigned to a block, and \texttt{Indentation} records the whitespace before the
+\texttt{BEGIN} marker.
 
 \paragraph{}
 You can see all of those fields in action in the above code block in this book.
-\emph{Define Block} is a description. The filename is \emph{docsfirst.go}, and
+\texttt{Define Block} is a description. The filename is \texttt{docsfirst.go}, and
 thats followed by the line number where that block starts in that file. The code
-you see is the block's body, and finally, the reason \emph{docsfirst} knows how
+you see is the block's body, and finally, the reason \texttt{docsfirst} knows how
 to syntax highlight the code is because of the data stored in the block's
-\emph{Language} field.
+\texttt{Language} field.
 
 \subsection{The ParseBlocks function}
 
 \paragraph{}
-The \emph{ParseBlocks} function is one of the two most important functions in
-\emph{docsfirst}. It has the job of parsing a file and splitting it up into
+The \texttt{ParseBlocks} function is one of the two most important functions in
+\texttt{docsfirst}. It has the job of parsing a file and splitting it up into
 blocks.
 
 %DOCSFIRST (ParseBlocks)
@@ -115,13 +115,13 @@ So we have a few variables:
 
 %DOCSFIRST Initialize block parsing state
 
-\emph{lineNumber} is the current line we're on. \emph{beginRegex} and
-\emph{endRegex} are two regular expressions that we use to parse BEGIN and END
-markers. The rest of them all deal with the state of the current block we are
-parsing. \emph{curDescription} is the most central to the control flow of the
-function, if it's not an empty string that means we're currently parsing a block.
-If it is an empty string, then it means we're not in the middle of a block and
-shouldn't touch the rest of block variables.
+\texttt{lineNumber} is the current line we're on. \texttt{beginRegex} and
+\texttt{endRegex} are two regular expressions that we use to parse \texttt{BEGIN}
+and \texttt{END} markers. The rest of them all deal with the state of the
+current block we are parsing. \texttt{curDescription} is the most central to
+the control flow of the function, if it's not an empty string that means we're
+currently parsing a block. If it is an empty string, then it means we're not in
+the middle of a block and shouldn't touch the rest of block variables.
 
 \paragraph{}
 Lets start looping over lines.
@@ -132,7 +132,7 @@ Lets start looping over lines.
 
 \paragraph{}
 Lets pretend we were already parsing another block already, what happens when we
-encounter a new BEGIN marker?
+encounter a new \texttt{BEGIN} marker?
 
 We output the block we were working on, and reset the current block state based
 on the new marker. You might ask why I did it this way, personally I felt having
@@ -150,25 +150,25 @@ whitespace\footnote{This can be safely ignored for now.}. The second is an
 optional tag, and finally the rest of the line ends up being the block's
 description.
 
-in \emph{ParseBlocks} we set what is in each group to its corresponding variable,
+in \texttt{ParseBlocks} we set what is in each group to its corresponding variable,
 to be used when this new block is completed.
 
 \paragraph{}
-Now if we find an END marker instead, we do nearly the same thing, except we
-don't start a new block by setting \emph{curDescription} to nil.
+Now if we find an \texttt{END} marker instead, we do nearly the same thing, except we
+don't start a new block by setting \texttt{curDescription} to nil.
 
 %DOCSFIRST Parsing a block and we find an end block marker
 
 \paragraph{}
 Now, if we don't match any marker at all, but we are currently parsing a block,
-we simply add the line of source code to \emph{curBody}
+we simply add the line of source code to \texttt{curBody}
 
 %DOCSFIRST If no match, append line to body
 
 \subsubsection{When not in the middle of a block}
 
 \paragraph{}
-Once again we test to see if we found a BEGIN marker, unlike last time we don't
+Once again we test to see if we found a \texttt{BEGIN} marker, unlike last time we don't
 have a previous block to output because we weren't in the middle of parsing one.
 Otherwise the code is the same.
 
@@ -177,8 +177,8 @@ Otherwise the code is the same.
 \subsubsection{Handling user errors}
 
 \paragraph{}
-There are two main user errors we can catch easily, the first is a dangling END.
-This happens when we encounter an END and we're not parsing a block.
+There are two main user errors we can catch easily, the first is a dangling \texttt{END}.
+This happens when we encounter an \texttt{END} and we're not parsing a block.
 
 %DOCSFIRST Handle dangling block ends
 
