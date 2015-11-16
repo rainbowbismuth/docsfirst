@@ -83,7 +83,9 @@ a\footnote{Actually, one or more blocks. We'll get to that a bit later} block.
 \emph{FileName} is the file in which a block came from, and \emph{LineNumber}
 is the line in that file that this block starts on. Finally we have a pointer to
 a \emph{Language} which contains useful information about which programming
-language a block is written in.
+language a block is written in. \emph{Tag} is an optional string that can be
+assigned to a block, and \emph{Indentation} records the whitespace before the
+BEGIN marker.
 
 \paragraph{}
 You can see all of those fields in action in the above code block in this book.
@@ -95,27 +97,95 @@ to syntax highlight the code is because of the data stored in the block's
 
 \subsection{The ParseBlocks function}
 
-\subsubsection{Overview}
 \paragraph{}
+The \emph{ParseBlocks} function is one of the two most important functions in
+\emph{docsfirst}. It has the job of parsing a file and splitting it up into
+blocks.
+
 %DOCSFIRST (ParseBlocks)
+
+This function uses an idiom used heavily elsewhere, where the function creates an
+output channel, and spawns a goroutine that puts data onto that output channel.
+It then returns immediately. The goroutine that is spawned also closes that
+channel at the very end, so that the consumer knows there won't be any more
+input.
+
 \paragraph{}
+So we have a few variables:
+
 %DOCSFIRST Initialize block parsing state
+
+\emph{lineNumber} is the current line we're on. \emph{beginRegex} and
+\emph{endRegex} are two regular expressions that we use to parse BEGIN and END
+markers. The rest of them all deal with the state of the current block we are
+parsing. \emph{curDescription} is the most central to the control flow of the
+function, if it's not an empty string that means we're currently parsing a block.
+If it is an empty string, then it means we're not in the middle of a block and
+shouldn't touch the rest of block variables.
+
 \paragraph{}
+Lets start looping over lines.
+
 %DOCSFIRST Start parsing blocks line by line
-\subsubsection{Parsing individual blocks}
+
+\subsubsection{When currently parsing a block}
+
 \paragraph{}
+Lets pretend we were already parsing another block already, what happens when we
+encounter a new BEGIN marker?
+
+We output the block we were working on, and reset the current block state based
+on the new marker. You might ask why I did it this way, personally I felt having
+to end every single block with an entire line dedicated to an END marker would
+just annoying.
+
 %DOCSFIRST Parsing a block and we find the start of another
+
+So what is this regex anyways? Let's take a look at the constants we use.
+
+%DOCSFIRST Regex Constants
+
+We end up with three groups. The first group in the regex records
+whitespace\footnote{This can be safely ignored for now.}. The second is an
+optional tag, and finally the rest of the line ends up being the block's
+description.
+
+in \emph{ParseBlocks} we set what is in each group to its corresponding variable,
+to be used when this new block is completed.
+
 \paragraph{}
+Now if we find an END marker instead, we do nearly the same thing, except we
+don't start a new block by setting \emph{curDescription} to nil.
+
 %DOCSFIRST Parsing a block and we find an end block marker
+
 \paragraph{}
+Now, if we don't match any marker at all, but we are currently parsing a block,
+we simply add the line of source code to \emph{curBody}
+
 %DOCSFIRST If no match, append line to body
+
+\subsubsection{When not in the middle of a block}
+
 \paragraph{}
+Once again we test to see if we found a BEGIN marker, unlike last time we don't
+have a previous block to output because we weren't in the middle of parsing one.
+Otherwise the code is the same.
+
 %DOCSFIRST Start parsing a new block
 
 \subsubsection{Handling user errors}
+
 \paragraph{}
+There are two main user errors we can catch easily, the first is a dangling END.
+This happens when we encounter an END and we're not parsing a block.
+
 %DOCSFIRST Handle dangling block ends
+
 \paragraph{}
+Another kind of user error that can occur is reaching the end of a file while in
+the middle of parsing a block.
+
 %DOCSFIRST Check if the file ended while parsing a block
 
 \end{document}

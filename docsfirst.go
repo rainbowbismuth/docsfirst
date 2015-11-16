@@ -44,6 +44,7 @@ type Block struct {
 
 // END
 
+// BEGIN Regex Constants
 const (
 	SPACE     = `(\s*)`
 	BEGIN     = ` *BEGIN(\([^\)]*\))? *(.*)`
@@ -59,26 +60,19 @@ func ParseBlocks(
 		defer close(out)
 		// BEGIN(ParseBlocks) Initialize block parsing state
 		lineNumber := 0
+		beginRegex := regexp.MustCompile(SPACE + lang.LineComment + BEGIN)
+		endRegex := regexp.MustCompile(SPACE + lang.LineComment + END)
 		startedAtLine := 0
 		var curIndentation string
 		var curDescription string
 		var curTag string
 		var curBody []string
 
-		beginRegex, err := regexp.Compile(SPACE + lang.LineComment + BEGIN)
-		if err != nil {
-			panic(err)
-		}
-
-		endRegex, err := regexp.Compile(SPACE + lang.LineComment + END)
-		if err != nil {
-			panic(err)
-		}
 		// BEGIN(ParseBlocks) Start parsing blocks line by line
 		for line := range in {
 			lineNumber++
-			// BEGIN(ParseBlocks) Parsing a block and we find the start of another
 			if curDescription != "" {
+				// BEGIN(ParseBlocks) Parsing a block and we find the start of another
 				strings := beginRegex.FindStringSubmatch(line)
 				if strings != nil {
 					out <- &Block{
@@ -107,7 +101,6 @@ func ParseBlocks(
 						Tag:         curTag,
 						Description: curDescription,
 						Body:        curBody}
-					startedAtLine = -1
 					curDescription = ""
 					curBody = nil
 					continue
@@ -134,7 +127,7 @@ func ParseBlocks(
 			}
 		}
 		// BEGIN(ParseBlocks) Check if the file ended while parsing a block
-		if curBody != nil || curDescription != "" {
+		if curDescription != "" {
 			panic(fmt.Errorf("EOF in the middle of a block in %s", fileName))
 		}
 		// BEGIN(ParseBlocks) Define ParseBlocks
