@@ -75,7 +75,7 @@ func TestRefCounts(t *testing.T) {
 	}()
 	blocks := ParseBlocks(testLang, "main.py", inSrc)
 	blockMap := <-GatherBlockMap(blocks)
-	_, refcount_future := RewriteTex(blockMap, inTex)
+	_, refcount_future := Rewrite(blockMap, inTex, &TexRewriter{})
 	refcounts := <-refcount_future
 	if refcounts["Say hello world"] != 2 ||
 		refcounts["Say goodbye world"] != 1 {
