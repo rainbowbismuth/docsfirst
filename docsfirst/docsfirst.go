@@ -20,15 +20,16 @@ import "github.com/rainbowbismuth/docsfirst"
 
 func main() {
 	language := &docsfirst.Language{
-		FileEndingRegex: "*.go",
-		LineComment:     "//",
-		MintedLanguage:  "go",
+		FileEndingRegex:        "*.go",
+		LineComment:            "//",
+		MintedLanguage:         "go",
+		GithubMarkdownLanguage: "go",
 	}
 	codeSrc := docsfirst.ReadLinesFromFile("docsfirst.go")
-	texSrc := docsfirst.ReadLinesFromFile("book.tex")
+	texSrc := docsfirst.ReadLinesFromFile("book.md")
 	blocks := docsfirst.ParseBlocks(language, "docsfirst.go", codeSrc)
 	blockMap := <-docsfirst.GatherBlockMap(blocks)
-	linesOut, refCounts := docsfirst.RewriteTex(blockMap, texSrc)
-	docsfirst.WriteLinesToFile("out.tex", linesOut)
+	linesOut, refCounts := docsfirst.Rewrite(blockMap, texSrc, &docsfirst.GithubMarkdownRewriter{})
+	docsfirst.WriteLinesToFile("out.md", linesOut)
 	docsfirst.CheckReferences(blockMap, <-refCounts)
 }

@@ -26,9 +26,10 @@ import (
 )
 
 type Language struct {
-	FileEndingRegex string
-	LineComment     string
-	MintedLanguage  string
+	FileEndingRegex        string
+	LineComment            string
+	MintedLanguage         string
+	GithubMarkdownLanguage string
 }
 
 // BEGIN Define Block
@@ -46,10 +47,9 @@ type Block struct {
 
 // BEGIN Regex Constants
 const (
-	SPACE     = `(\s*)`
-	BEGIN     = ` *BEGIN(\([^\)]*\))? *(.*)`
-	END       = " *END"
-	DOCSFIRST = "% *DOCSFIRST *(.*)"
+	SPACE = `(\s*)`
+	BEGIN = ` *BEGIN(\([^\)]*\))? *(.*)`
+	END   = " *END"
 )
 
 // BEGIN(ParseBlocks) Define ParseBlocks
@@ -153,14 +153,19 @@ func GatherBlockMap(in <-chan *Block) <-chan map[string][]*Block {
 	return out
 }
 
-func RewriteTex(blockMap map[string][]*Block, in <-chan string) (<-chan string, <-chan map[string]int) {
+type Rewriter interface {
+	Regex() string
+	Match(blocks []*Block, out chan<- string)
+}
+
+func Rewrite(blockMap map[string][]*Block, in <-chan string, rewriter Rewriter) (<-chan string, <-chan map[string]int) {
 	out := make(chan string, 64)
 	refcounts := make(chan map[string]int, 1)
 	go func() {
 		defer close(out)
 		defer close(refcounts)
 		counts := map[string]int{}
-		docsFirstRegex := regexp.MustCompile(DOCSFIRST)
+		docsFirstRegex := regexp.MustCompile(rewriter.Regex())
 		for line := range in {
 			strings := docsFirstRegex.FindStringSubmatch(line)
 			if strings != nil {
@@ -170,54 +175,7 @@ func RewriteTex(blockMap map[string][]*Block, in <-chan string) (<-chan string, 
 				if blocks == nil {
 					panic(fmt.Errorf("Missing block: %s", description))
 				}
-				firstBlock := blocks[0]
-				out <- "\\phantomsection"
-				out <- fmt.Sprintf(
-					"\\label{lst:%s%d}",
-					firstBlock.Description,
-					firstBlock.StartLine)
-				mintCommand := fmt.Sprint(
-					"\\begin{minted}[tabsize=4]{",
-					firstBlock.Language.MintedLanguage,
-					"}")
-				out <- "\\begin{defquote}"
-				out <- fmt.Sprint(
-					"\\noindent \\( \\ll \\) ",
-					firstBlock.Description,
-					" \\( \\gg \\enspace \\equiv \\) \\hfill ",
-					firstBlock.FileName,
-					":",
-					firstBlock.StartLine)
-				out <- mintCommand
-				for _, bodyLine := range firstBlock.Body {
-					out <- bodyLine
-				}
-				out <- "\\end{minted}"
-				if len(blocks) > 1 {
-					for i := 1; i < len(blocks); i++ {
-						if blocks[i].Description == firstBlock.Description {
-							out <- mintCommand
-							for _, bodyLine := range blocks[i].Body {
-								out <- bodyLine
-							}
-							out <- "\\end{minted}"
-						} else {
-							out <- fmt.Sprint(
-								"\\mintinline[tabsize=4]{",
-								firstBlock.Language.MintedLanguage,
-								"}|",
-								blocks[i].Indentation,
-								firstBlock.Language.LineComment,
-								"| \\( \\ll \\) ",
-								blocks[i].Description,
-								" \\( \\gg \\) \\hfill (\\ref{lst:",
-								blocks[i].Description,
-								blocks[i].StartLine,
-								"}) \\\\")
-						}
-					}
-				}
-				out <- "\\end{defquote}"
+				rewriter.Match(blocks, out)
 			} else {
 				out <- line
 			}
