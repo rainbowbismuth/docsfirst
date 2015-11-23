@@ -21,7 +21,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"regexp"
 )
@@ -55,27 +54,26 @@ func main() {
 	warnOnUnused := flag.Bool("warn", true, "warn on unused entries")
 	inputDoc := flag.String("input", "", "input document")
 	outputDoc := flag.String("output", "", "output document")
-	src := flag.String("src", "", "source files")
 	flag.Parse()
 
-	if *inputDoc == "" || *outputDoc == "" || *src == "" {
+	src := flag.Args()
+
+	if *inputDoc == "" || *outputDoc == "" || src == nil {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
 
 	allBlocks := make(chan *docsfirst.Block, 64)
-	fields := strings.Fields(*src)
-
 	var doneReadingSrc sync.WaitGroup
-	doneReadingSrc.Add(len(fields))
+	doneReadingSrc.Add(len(src))
 
 	go func() {
 		doneReadingSrc.Wait()
 		close(allBlocks)
 	}()
 
-	for _, filename := range fields {
+	for _, filename := range src {
 		language := findLanguage(filename)
 		codeSrc := docsfirst.ReadLinesFromFile(filename)
 		blocks := docsfirst.ParseBlocks(language, filename, codeSrc)
