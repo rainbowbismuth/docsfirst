@@ -58,8 +58,8 @@ func main() {
 
 	src := flag.Args()
 
-	if *inputDoc == "" || *outputDoc == "" || src == nil {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+	if *inputDoc == "" || *outputDoc == "" || len(src) == 0 {
+		fmt.Fprintf(os.Stderr, "USAGE: %s [options] <source files>\n", os.Args[0])
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
