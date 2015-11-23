@@ -16,20 +16,83 @@
 
 package main
 
-import "github.com/rainbowbismuth/docsfirst"
+import (
+	"github.com/rainbowbismuth/docsfirst"
+	"flag"
+	"fmt"
+	"os"
+	"strings"
+	"sync"
+	"regexp"
+)
 
-func main() {
-	language := &docsfirst.Language{
-		FileEndingRegex:        "*.go",
+func findLanguage(filename string) *docsfirst.Language {
+	languages := []*docsfirst.Language{&docsfirst.Language{
+		FileEndingRegex:        ".*.go",
 		LineComment:            "//",
 		MintedLanguage:         "go",
 		GithubMarkdownLanguage: "go",
+	}}
+
+	for _, language := range languages {
+		found, err := regexp.MatchString(language.FileEndingRegex, filename)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Regex error in %s\n %s", language.FileEndingRegex, err)
+			os.Exit(1)
+		}
+		if found {
+			return language
+		}
 	}
-	codeSrc := docsfirst.ReadLinesFromFile("docsfirst.go")
-	texSrc := docsfirst.ReadLinesFromFile("book.md")
-	blocks := docsfirst.ParseBlocks(language, "docsfirst.go", codeSrc)
-	blockMap := <-docsfirst.GatherBlockMap(blocks)
+
+	fmt.Fprintf(os.Stderr, "No file ending match on %s\n", filename)
+	os.Exit(1)
+	return nil
+}
+
+
+func main() {
+	warnOnUnused := flag.Bool("warn", true, "warn on unused entries")
+	inputDoc := flag.String("input", "", "input document")
+	outputDoc := flag.String("output", "", "output document")
+	src := flag.String("src", "", "source files")
+	flag.Parse()
+
+	if *inputDoc == "" || *outputDoc == "" || *src == "" {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
+
+	allBlocks := make(chan *docsfirst.Block, 64)
+	fields := strings.Fields(*src)
+
+	var doneReadingSrc sync.WaitGroup
+	doneReadingSrc.Add(len(fields))
+
+	go func() {
+		doneReadingSrc.Wait()
+		close(allBlocks)
+	}()
+
+	for _, filename := range fields {
+		language := findLanguage(filename)
+		codeSrc := docsfirst.ReadLinesFromFile(filename)
+		blocks := docsfirst.ParseBlocks(language, filename, codeSrc)
+		go func() {
+			for block := range blocks {
+				allBlocks <- block
+			}
+			doneReadingSrc.Done()
+		}()
+	}
+
+	texSrc := docsfirst.ReadLinesFromFile(*inputDoc)
+	blockMap := <-docsfirst.GatherBlockMap(allBlocks)
 	linesOut, refCounts := docsfirst.Rewrite(blockMap, texSrc, &docsfirst.GithubMarkdownRewriter{})
-	docsfirst.WriteLinesToFile("out.md", linesOut)
-	docsfirst.CheckReferences(blockMap, <-refCounts)
+	docsfirst.WriteLinesToFile(*outputDoc, linesOut)
+
+	if *warnOnUnused {
+		docsfirst.CheckReferences(blockMap, <-refCounts)
+	}
 }
